@@ -32,7 +32,7 @@ WHERE datekey >= current_date - interval '90 days' AND
         WHERE first_name like '%HCL%'
         ) AND 
         term_status = 'ALLOWED'
-   AND call_type ='Voice'
+   AND call_type ='Voice'  --***   ONLY MATCH VOICE CALLS   ***
 GROUP BY external_number 
 ORDER BY external_number
 ) b ON a.directory_number=b.external_number
