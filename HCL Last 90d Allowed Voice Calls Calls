@@ -1,0 +1,43 @@
+| dbxquery 
+maxrows=500000
+connection=dw_moodys
+query="
+SELECT 'dw_moodys' AS customer,
+       REPLACE(REPLACE(REPLACE(REPLACE(a.directory_number,'[',''),']',''),'(',''),')','') as directory_number,
+       a.last_name,
+       b.calls,
+       b.total_duration_seconds,
+       b.avg_duration_seconds
+FROM 
+(
+SELECT directory_number, last_name 
+FROM etm_directory
+WHERE first_name like '%HCL%'
+ORDER BY directory_number
+) a
+INNER JOIN
+(
+SELECT   external_number,
+         count(c.call_oid) as calls,
+         sum(c.dur_answered_sec) as total_duration_seconds,
+         avg(c.dur_answered_sec) as avg_duration_seconds
+FROM     dw_fk_datawarehouse_nomodel c
+WHERE datekey >= current_date - interval '90 days' AND 
+         datekey < current_date AND 
+         direction = 'INBOUND' AND
+         external_number IN 
+        (
+        SELECT distinct directory_number
+        FROM etm_directory
+        WHERE first_name like '%HCL%'
+        ) AND 
+        term_status = 'ALLOWED'
+   AND call_type ='Voice'
+GROUP BY external_number 
+ORDER BY external_number
+) b ON a.directory_number=b.external_number
+WHERE avg_duration_seconds < 30
+AND calls > 2
+"
+|table directory_number last_name calls total_duration_seconds avg_duration_seconds
+|sort calls desc
